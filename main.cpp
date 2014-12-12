@@ -4,8 +4,8 @@
 #include "objbase.h"
 #include "objidl.h"
 #include "shlguid.h"
-#include<stdio.h>
-#include<iostream>
+#include <stdio.h>
+#include <iostream>
 #include "strsafe.h"
 
 using namespace std;
@@ -14,33 +14,52 @@ HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc);
 
 int main(int argc,char** argv)
 {
-	char *file,*filename, *target;
-	char *dfile = "\\Links\\RepoZip";
+	char *user,*file,*filename, *target;
+	char *dfile = "\\Links\\RepoZip.lnk";
 	char *comment = "crate favorite folder link for repozip folder";
-	bool re;
+	bool re = false;
+	int tSize, fSize;
+	size_t requiredSize;
 
 	filename = "\\RepoZip";
-	char *user = getenv("USERPROFILE");
-	if(user!= NULL){
-		target = (char *)calloc(strlen(user),strlen(dfile));
-		file = (char *)calloc(strlen(user),strlen(filename));
-		strcpy(target,user);
-		strcat(target, dfile);
-		strcpy(file,user);
-		strcat(file,filename);
-	}else{
-		cout << "couldn't find user name" << endl;
+	getenv_s(&requiredSize, NULL, 0, "USERPROFILE");
+	if (requiredSize == 0)
+	{
+      printf("USERPROFILE doesn't exist!\n");
+      exit(1);
 	}
 
+	user = (char*) malloc(requiredSize * sizeof(char));
+	if (!user)
+	{
+      printf("Failed to allocate memory!\n");
+      exit(1);
+	}
+
+	// Get the value of the LIB environment variable.
+	getenv_s( &requiredSize, user, requiredSize, "USERPROFILE" );
+
+	tSize = strlen(user)+strlen(dfile)+2;	
+	fSize = strlen(user)+strlen(filename)+2;
+	target = (char *)calloc(tSize,sizeof(char));
+	file = (char *)calloc(fSize, sizeof(char));
+	strcpy_s(target, tSize, user);
+	strcat_s(target, tSize, dfile);
+	strcpy_s(file, fSize, user);
+	strcat_s(file, fSize, filename);
+	
 	re = CreateDirectory(file,NULL);
 	if(!re){
-		cout << "folder" << file << "creation fail"<< endl;
+		cout << "folder " << file << " creation fail"<< endl;
+	}else{
+		cout << "successfully create folder" << file << endl;
 	}
 	
 	CoInitialize(NULL);
 	HRESULT h = CreateLink((LPCWSTR)file, (LPCSTR)target,(LPCWSTR)comment);
 	CoUninitialize();
-	
+
+	while(true);
 	return 0;
 }
 
@@ -51,7 +70,7 @@ HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
  
 	// Get a pointer to the IShellLink interface. It is assumed that CoInitialize
 	// has already been called.
-	hres = CoCreateInstance(CLSID_FolderShortcut, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl); 
+	hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&psl); 
 	if (SUCCEEDED(hres)) 
 	{ 
 		IPersistFile* ppf; 
@@ -83,6 +102,3 @@ HRESULT CreateLink(LPCWSTR lpszPathObj, LPCSTR lpszPathLink, LPCWSTR lpszDesc)
 	} 
 	return hres; 
 }
-
-/*
-
